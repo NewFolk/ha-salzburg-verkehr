@@ -1,0 +1,13 @@
+/work/
+/outputs/
+*.har
+*.private.json
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+dist/

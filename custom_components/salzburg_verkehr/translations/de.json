@@ -1,0 +1,69 @@
+{
+  "title": "Salzburg Verkehr",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Haltestelle suchen",
+        "data": {
+          "query": "Name der Haltestelle"
+        }
+      },
+      "station": {
+        "title": "Haltestelle auswählen",
+        "data": {
+          "station_id": "Haltestelle"
+        }
+      },
+      "settings": {
+        "title": "Abfahrtstafel einrichten",
+        "description": "Filter sind optional. Mehrere Linien, Richtungen oder Zwischenhalte durch Kommas trennen. Linien werden exakt verglichen, bei Richtungen und Zwischenhalten genügt ein Teil des Namens. Ohne Verkehrsmittel-Auswahl werden alle angezeigt. Steige erscheinen, wenn sie in der aktuellen Abfahrtstafel vorkommen.",
+        "data": {
+          "boarding_stop": "Einstiegshaltestelle / Steig",
+          "lines": "Linien",
+          "directions": "Richtungen",
+          "via": "Zwischenhalte",
+          "categories": "Verkehrsmittel",
+          "update_interval": "Aktualisierungsintervall (Sekunden)",
+          "max_departures": "Maximale Abfahrten"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Salzburg Verkehr ist nicht erreichbar. Bitte erneut versuchen.",
+      "no_stations": "Keine Haltestellen gefunden. Bitte einen anderen Namen versuchen."
+    },
+    "abort": {
+      "already_configured": "Diese Abfahrtstafel ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Abfahrtstafel einrichten",
+        "description": "Filter sind optional. Mehrere Linien, Richtungen oder Zwischenhalte durch Kommas trennen. Linien werden exakt verglichen, bei Richtungen und Zwischenhalten genügt ein Teil des Namens. Ohne Verkehrsmittel-Auswahl werden alle angezeigt. Steige erscheinen, wenn sie in der aktuellen Abfahrtstafel vorkommen.",
+        "data": {
+          "boarding_stop": "Einstiegshaltestelle / Steig",
+          "lines": "Linien",
+          "directions": "Richtungen",
+          "via": "Zwischenhalte",
+          "categories": "Verkehrsmittel",
+          "update_interval": "Aktualisierungsintervall (Sekunden)",
+          "max_departures": "Maximale Abfahrten"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Abfahrtstafel ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_departure": {
+        "name": "Nächste Abfahrt"
+      },
+      "departures_count": {
+        "name": "Anzahl der Abfahrten"
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "title": "Salzburg Verkehr",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Find a stop",
+        "data": {
+          "query": "Stop name"
+        }
+      },
+      "station": {
+        "title": "Choose a stop",
+        "data": {
+          "station_id": "Stop"
+        }
+      },
+      "settings": {
+        "title": "Configure departure board",
+        "description": "Filters are optional. Separate multiple lines, directions or intermediate stops with commas. Lines match exactly; directions and intermediate stops match part of the name. No transport types selected means all. Platform choices show stops present on the current board.",
+        "data": {
+          "boarding_stop": "Boarding stop / platform",
+          "lines": "Lines",
+          "directions": "Directions",
+          "via": "Intermediate stops",
+          "categories": "Transport types",
+          "update_interval": "Update interval (seconds)",
+          "max_departures": "Maximum departures"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach Salzburg Verkehr. Try again.",
+      "no_stations": "No stops found. Try a different name."
+    },
+    "abort": {
+      "already_configured": "This departure board is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure departure board",
+        "description": "Filters are optional. Separate multiple lines, directions or intermediate stops with commas. Lines match exactly; directions and intermediate stops match part of the name. No transport types selected means all. Platform choices show stops present on the current board.",
+        "data": {
+          "boarding_stop": "Boarding stop / platform",
+          "lines": "Lines",
+          "directions": "Directions",
+          "via": "Intermediate stops",
+          "categories": "Transport types",
+          "update_interval": "Update interval (seconds)",
+          "max_departures": "Maximum departures"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This departure board is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_departure": {
+        "name": "Next departure"
+      },
+      "departures_count": {
+        "name": "Departures count"
+      }
+    }
+  }
+}
