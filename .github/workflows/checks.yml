@@ -7,14 +7,30 @@ permissions:
   contents: read
 jobs:
   test:
+    name: Tests (HA ${{ matrix.homeassistant }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - homeassistant: "2026.1.0"
+            python: "3.13"
+            requirements: requirements-test-2026.1.txt
+          - homeassistant: "2026.10.0"
+            python: "3.14"
+            requirements: requirements-dev.txt
+    env:
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: ${{ matrix.python }}
           cache: pip
-      - run: pip install -r requirements-dev.txt
+          cache-dependency-path: "requirements*.txt"
+      - run: pip install -r ${{ matrix.requirements }}
+      - name: Verify Home Assistant version
+        run: python -c "from importlib.metadata import version; assert version('homeassistant') == '${{ matrix.homeassistant }}'"
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest

@@ -19,7 +19,7 @@ Departure boards powered exclusively by **Salzburg Verkehr**, with UI setup and 
 
 ## Installation
 
-Requires **Home Assistant 2026.10.0 or newer**. Tested with Home Assistant 2026.10.0.
+Requires **Home Assistant 2026.1.0 or newer**. Tested with Home Assistant 2026.1.0 on Python 3.13 and Home Assistant 2026.10.0 on Python 3.14.
 
 ### HACS
 
@@ -102,7 +102,9 @@ python3.14 -m venv .venv
 .venv/bin/pytest
 ```
 
-The test suite runs against real Home Assistant, with network access disabled and synthetic fixtures. It covers setup, sensors, configuration/options flows, retries and recovery, API errors, filtering, unknown forecasts, delays, cancellations and midnight rollover. GitHub Actions additionally runs hassfest and HACS validation. Manual live checks were performed against Salzburg Verkehr for Salzachstraße, Ferdinand-Hanusch-Platz and Mirabellplatz; these are not part of the automated suite.
+The default development requirements use Home Assistant 2026.10.0. To test the minimum supported release, create a Python 3.13 environment and install `requirements-test-2026.1.txt` instead. Set `LITELLM_LOCAL_MODEL_COST_MAP=True` for that environment to keep an unrelated cloud-library import offline.
+
+The test suite runs against real Home Assistant, with network access disabled and synthetic fixtures. It covers setup, sensors, configuration/options flows, retries and recovery, API errors, filtering, unknown forecasts, delays, cancellations and midnight rollover. GitHub Actions tests both Home Assistant versions and additionally runs hassfest and HACS validation. Manual live checks were performed against Salzburg Verkehr for Salzachstraße, Ferdinand-Hanusch-Platz and Mirabellplatz; these are not part of the automated suite.
 
 ## Credits and license
 

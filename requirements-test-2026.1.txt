@@ -1,0 +1,6 @@
+# This test plugin pins Home Assistant to exactly 2026.1.0.
+pytest-homeassistant-custom-component==0.13.305
+ruff==0.17.0
+# Test-only transitive dependency: 1.95.0 has a broken source distribution.
+# Use the preceding release with wheels so the older HA environment is reproducible.
+litellm==1.94.3
