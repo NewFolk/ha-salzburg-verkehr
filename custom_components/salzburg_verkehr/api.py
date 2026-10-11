@@ -81,15 +81,17 @@ class Board:
 
 
 def parse_time(date: str, clock: str) -> datetime:
-    """Convert HAFAS's extended local hours (24:03 = next-day 00:03)."""
-    if not isinstance(clock, str) or len(clock) != 6 or not clock.isdigit():
+    """Decode HHMMSS or DDHHMMSS; DD is days after the journey date."""
+    if not isinstance(clock, str) or len(clock) not in (6, 8) or not clock.isdigit():
         raise ValueError("Invalid departure time")
+    days = int(clock[:2]) if len(clock) == 8 else 0
+    clock = clock[-6:]
     hours, minutes, seconds = int(clock[:2]), int(clock[2:4]), int(clock[4:])
     if minutes > 59 or seconds > 59:
         raise ValueError("Invalid departure time")
-    return (datetime.strptime(date, "%Y%m%d") + timedelta(hours=hours, minutes=minutes, seconds=seconds)).replace(
-        tzinfo=TIMEZONE
-    )
+    return (
+        datetime.strptime(date, "%Y%m%d") + timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+    ).replace(tzinfo=TIMEZONE)
 
 
 def _reference(items: list, index: Any) -> Any:

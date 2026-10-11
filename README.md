@@ -16,7 +16,7 @@ Departure boards powered exclusively by **Salzburg Verkehr**, with UI setup and 
 - Predictions before the scheduled time are retained, including negative delay values.
 - Departures are sorted by their predicted time when available; past departures are excluded.
 - Cancelled departures remain visible in board attributes but are excluded from the next usable departure and count.
-- Extended times such as `24:03` correctly refer to the next calendar day.
+- HAFAS day offsets such as `01000600` (next-day 00:06) and extended hours such as `24:03` are handled correctly.
 - English, German and Russian UI translations.
 
 ## Installation
@@ -94,6 +94,10 @@ entities:
 ```
 
 If there are no usable departures, the next departure is `unknown` and the count is zero. If fetching fails, both sensors become `unavailable`; Home Assistant retries automatically. This distinguishes an empty board from a network outage. The count excludes cancellations and covers only the configured list, not the entire day's timetable.
+
+## Troubleshooting
+
+If versions up to 0.1.2 report `Unexpected departure data from Salzburg Verkehr` when the board reaches departures after midnight, update to **0.1.3 or newer**. The API can encode next-day departures with an eight-digit day offset, for example `01000600`. Version 0.1.3 fixes parsing this valid format; it does not require changing filters, credentials or polling intervals.
 
 ## Data source and limits
 

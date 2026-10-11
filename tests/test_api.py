@@ -39,6 +39,59 @@ def test_early_and_after_midnight():
     assert parse_board(raw, NOW).departures[0].delay_minutes == -1
 
 
+@pytest.mark.parametrize(
+    "clock,expected",
+    [
+        ("01000600", "2026-10-12T00:06:00+02:00"),
+        ("01002600", "2026-10-12T00:26:00+02:00"),
+        ("00000600", "2026-10-11T00:06:00+02:00"),
+        ("02123000", "2026-10-13T12:30:00+02:00"),
+        ("240600", "2026-10-12T00:06:00+02:00"),
+    ],
+)
+def test_hafas_day_offset_time(clock, expected):
+    assert parse_time("20261011", clock).isoformat() == expected
+
+
+def test_day_offset_across_year_boundary():
+    assert parse_time("20261231", "01000600").isoformat() == "2027-01-01T00:06:00+01:00"
+
+
+def test_board_with_next_day_departures_does_not_break_current_board():
+    raw = response()
+    # Actual failing departure fields returned by Salzburg Verkehr at 13:52 CEST.
+    raw["jnyL"].append(
+        {
+            "date": "20261011",
+            "dirTxt": "Salzburg Süd",
+            "prodX": 0,
+            "stbStop": {"locX": 0, "idx": 24, "dTimeS": "01000600"},
+            "stopL": [{"idx": 24, "locX": 0, "dTimeS": "01000600"}, {"idx": 25, "locX": 1, "aTimeS": "01000700"}],
+        }
+    )
+    parsed = parse_board(raw, NOW)
+    assert len(parsed.departures) == 3
+    assert [d.line for d in parsed.departures[:2]] == ["17", "7"]
+    next_day = parsed.departures[-1]
+    assert next_day.scheduled_time.isoformat() == "2026-10-12T00:06:00+02:00"
+    assert next_day.realtime_time is None
+    assert next_day.delay_minutes is None
+    selected = filter_board(parsed, lines="7", limit=1)
+    assert len(selected.departures) == 1
+    assert len(selected.next_departures) == 2
+
+
+def test_prediction_with_day_offset_calculates_delay():
+    raw = response()
+    stop = raw["jnyL"][0]["stbStop"]
+    stop.update(dTimeS="01000600", dTimeR="01000800")
+    next_day = parse_board(raw, NOW).departures[-1]
+    assert next_day.delay is True
+    assert next_day.delay_minutes == 2
+    stop.update(dTimeS="235800", dTimeR="01000300")
+    assert parse_board(raw, NOW).departures[-1].delay_minutes == 5
+
+
 def test_delay_keeps_past_schedule_and_removes_past_forecast():
     raw = response()
     raw["jnyL"][0]["stbStop"].update(dTimeS="105900", dTimeR="110100")
@@ -57,7 +110,7 @@ def test_cancellation_and_downstream_stops():
     assert first.intermediate_stops == ("Salzburg Süd",)
 
 
-@pytest.mark.parametrize("clock", ["126000", "120060", "no time", None])
+@pytest.mark.parametrize("clock", ["126000", "120060", "no time", None, "01006000", "01000660", "1000600", "010006000"])
 def test_bad_clock(clock):
     with pytest.raises(ValueError):
         parse_time("20261011", clock)
