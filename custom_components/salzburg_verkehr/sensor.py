@@ -1,4 +1,4 @@
-"""The next usable departure and the number of usable departures."""
+"""The first two usable departures and the number of displayed departures."""
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.core import HomeAssistant
@@ -20,6 +20,8 @@ def departure_attributes(departure: Departure) -> dict:
         "realtime_time": departure.realtime_time,
         "realtime_available": departure.realtime_time is not None,
         "delay_minutes": departure.delay_minutes,
+        "delay": departure.delay,
+        "delay_time": departure.delay_minutes,
         "line": departure.line,
         "product": departure.product,
         "category": departure.category,
@@ -32,7 +34,13 @@ def departure_attributes(departure: Departure) -> dict:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: SalzburgEntry, async_add_entities: AddEntitiesCallback) -> None:
-    async_add_entities([NextDeparture(entry.runtime_data, entry), DeparturesCount(entry.runtime_data, entry)])
+    async_add_entities(
+        [
+            NextDeparture(entry.runtime_data, entry),
+            AfterNextDeparture(entry.runtime_data, entry),
+            DeparturesCount(entry.runtime_data, entry),
+        ]
+    )
 
 
 class BoardSensor(CoordinatorEntity[SalzburgCoordinator], SensorEntity):
@@ -50,32 +58,49 @@ class BoardSensor(CoordinatorEntity[SalzburgCoordinator], SensorEntity):
         )
 
 
-class NextDeparture(BoardSensor):
+class DepartureSensor(BoardSensor):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:bus-clock"
 
-    def __init__(self, coordinator, entry):
-        super().__init__(coordinator, entry, "next_departure")
+    def __init__(self, coordinator, entry, key: str, position: int):
+        super().__init__(coordinator, entry, key)
+        self._position = position
+
+    @property
+    def _departure(self) -> Departure | None:
+        board = self.coordinator.data
+        if board is None or len(board.next_departures) <= self._position:
+            return None
+        return board.next_departures[self._position]
 
     @property
     def native_value(self):
-        if self.coordinator.data:
-            return next((d.time for d in self.coordinator.data.departures if not d.cancelled), None)
-        return None
+        departure = self._departure
+        return departure.time if departure else None
 
     @property
     def extra_state_attributes(self):
         board = self.coordinator.data
         if board is None:
             return {"departures": []}
-        first = next((d for d in board.departures if not d.cancelled), None)
+        selected = self._departure
         return {
-            **(departure_attributes(first) if first else {}),
+            **(departure_attributes(selected) if selected else {}),
             "departures": [departure_attributes(d) for d in board.departures],
             "last_updated": board.updated_at,
             "source": "Salzburg Verkehr",
             "source_board_truncated": board.truncated,
         }
+
+
+class NextDeparture(DepartureSensor):
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "next_departure", 0)
+
+
+class AfterNextDeparture(DepartureSensor):
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "after_next_departure", 1)
 
 
 class DeparturesCount(BoardSensor):

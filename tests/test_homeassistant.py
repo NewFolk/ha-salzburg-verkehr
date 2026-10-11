@@ -1,5 +1,6 @@
 """Load real Home Assistant entities, options flows and update failures."""
 
+from copy import deepcopy
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import ConfigEntryState
@@ -15,11 +16,11 @@ from .helpers import NOW, STATION, board, response
 CLIENT = "custom_components.salzburg_verkehr.api.SalzburgClient"
 
 
-def entry(options=None):
+def entry(options=None, title=STATION.name):
     options = settings(options or {})
     return MockConfigEntry(
         domain=DOMAIN,
-        title=STATION.name,
+        title=title,
         data={
             "station_id": STATION.id,
             "station_name": STATION.name,
@@ -39,10 +40,14 @@ async def test_setup_attributes_unload_and_options(hass):
         assert await hass.config_entries.async_setup(config.entry_id)
         await hass.async_block_till_done()
         registered = er.async_entries_for_config_entry(er.async_get(hass), config.entry_id)
-        assert len(registered) == 2
-        next_state = next(hass.states.get(e.entity_id) for e in registered if e.unique_id.endswith("next_departure"))
+        assert len(registered) == 3
+        next_state = next(
+            hass.states.get(e.entity_id) for e in registered if e.unique_id == f"{config.entry_id}_next_departure"
+        )
         assert next_state.attributes["line"] == "7"
         assert next_state.attributes["delay_minutes"] == 3
+        assert next_state.attributes["delay_time"] == 3
+        assert next_state.attributes["delay"] is True
         assert next_state.attributes["realtime_available"] is True
         assert len(next_state.attributes["departures"]) == 1
         flow = await hass.config_entries.options.async_init(config.entry_id)
@@ -93,16 +98,56 @@ async def test_cancelled_not_next_and_empty_board(hass):
         await hass.config_entries.async_setup(config.entry_id)
         await hass.async_block_till_done()
         registered = er.async_entries_for_config_entry(er.async_get(hass), config.entry_id)
-        states = {e.unique_id.split("_")[-1]: hass.states.get(e.entity_id) for e in registered}
-        assert states["departure"].attributes["line"] == "7"
-        assert states["count"].state == "1"
-        assert any(d["cancelled"] for d in states["departure"].attributes["departures"])
+        states = {e.unique_id.removeprefix(f"{config.entry_id}_"): hass.states.get(e.entity_id) for e in registered}
+        assert states["next_departure"].attributes["line"] == "7"
+        assert states["departures_count"].state == "1"
+        assert states["after_next_departure"].state == "unknown"
+        assert "delay" not in states["after_next_departure"].attributes
+        assert any(d["cancelled"] for d in states["next_departure"].attributes["departures"])
         raw["jnyL"] = []
         mock.return_value = parse_board(raw, NOW)
         await config.runtime_data.async_refresh()
         await hass.async_block_till_done()
-        assert hass.states.get(states["departure"].entity_id).state == "unknown"
-        assert hass.states.get(states["count"].entity_id).state == "0"
+        assert hass.states.get(states["next_departure"].entity_id).state == "unknown"
+        assert hass.states.get(states["after_next_departure"].entity_id).state == "unknown"
+        assert hass.states.get(states["departures_count"].entity_id).state == "0"
+
+
+async def test_after_next_forecast_order_filters_and_limit(hass):
+    config = entry(
+        {"lines": "7", "directions": "Salzachsee", "max_departures": 1}, title="Salzburg Salzachstraße (7 → Salzachsee)"
+    )
+    config.add_to_hass(hass)
+    raw = response()
+    raw["jnyL"][0]["dirTxt"] = "Salzachsee"
+    earlier = deepcopy(raw["jnyL"][0])
+    earlier["stbStop"].update(dTimeS="120400", dTimeR="120200")
+    cancelled = deepcopy(earlier)
+    cancelled["stbStop"].update(dTimeS="120000", dCncl=True)
+    raw["jnyL"].extend([earlier, cancelled])
+    with patch(CLIENT + ".get_board", AsyncMock(return_value=parse_board(raw, NOW))) as mock:
+        assert await hass.config_entries.async_setup(config.entry_id)
+        await hass.async_block_till_done()
+        registered = er.async_entries_for_config_entry(er.async_get(hass), config.entry_id)
+        states = {e.unique_id.removeprefix(f"{config.entry_id}_"): hass.states.get(e.entity_id) for e in registered}
+        first, second = states["next_departure"], states["after_next_departure"]
+        assert second.entity_id == "sensor.salzburg_salzachstrasse_7_salzachsee_after_next_departure"
+        assert first.entity_id == "sensor.salzburg_salzachstrasse_7_salzachsee_next_departure"
+        assert first.attributes["realtime_time"].minute == 2
+        assert first.attributes["delay"] is False
+        assert first.attributes["delay_time"] == -2
+        assert second.attributes["realtime_time"].minute == 3
+        assert second.attributes["delay"] is True
+        assert second.attributes["delay_time"] == 3
+        assert len(second.attributes["departures"]) == 1
+        # A subsequent refresh with no second match must clear its old attributes.
+        raw["jnyL"] = [earlier]
+        mock.return_value = parse_board(raw, NOW)
+        await config.runtime_data.async_refresh()
+        await hass.async_block_till_done()
+        second = hass.states.get(second.entity_id)
+        assert second.state == "unknown"
+        assert "delay_time" not in second.attributes
 
 
 async def test_config_flow_and_duplicate(hass):

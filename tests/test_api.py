@@ -15,6 +15,7 @@ from custom_components.salzburg_verkehr.api import (
     parse_board,
     parse_time,
 )
+from custom_components.salzburg_verkehr.sensor import departure_attributes
 
 from .helpers import NOW, STATION, board, response
 
@@ -89,6 +90,38 @@ def test_filters_exact_lines_platform_category_and_via():
     assert filter_board(sample, via=STATION.name).departures == ()
     assert filter_board(sample, lines="8").departures == ()
     assert len(filter_board(sample, limit=1).departures) == 1
+
+
+@pytest.mark.parametrize(
+    "forecast,delay,time",
+    [
+        ("120300", True, 3),
+        ("120000", False, 0),
+        ("115900", False, -1),
+        ("120030", True, 0.5),
+        (None, False, None),
+    ],
+)
+def test_delay_attributes(forecast, delay, time):
+    raw = response()
+    stop = raw["jnyL"][0]["stbStop"]
+    if forecast is None:
+        stop.pop("dTimeR")
+    else:
+        stop["dTimeR"] = forecast
+    departure = next(d for d in parse_board(raw, NOW).departures if d.line == "7")
+    attrs = departure_attributes(departure)
+    assert attrs["delay"] is delay
+    assert attrs["delay_time"] == time
+    assert attrs["delay_minutes"] == time
+
+
+def test_cancelled_delay_attributes():
+    raw = response()
+    raw["jnyL"][0]["stbStop"]["dCncl"] = True
+    attrs = departure_attributes(next(d for d in parse_board(raw, NOW).departures if d.line == "7"))
+    assert attrs["delay"] is False
+    assert attrs["delay_time"] is None
 
 
 async def test_http_client_and_cached_public_identifier(hass, aioclient_mock, freezer):

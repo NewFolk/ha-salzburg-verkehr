@@ -61,6 +61,12 @@ class Departure:
             return None
         return (self.realtime_time.timestamp() - self.scheduled_time.timestamp()) / 60
 
+    @property
+    def delay(self) -> bool:
+        """Whether an available prediction indicates a positive delay."""
+        minutes = self.delay_minutes
+        return minutes is not None and minutes > 0
+
 
 @dataclass(frozen=True, slots=True)
 class Board:
@@ -71,6 +77,7 @@ class Board:
     categories: tuple[str, ...]
     updated_at: datetime
     truncated: bool
+    next_departures: tuple[Departure, ...] = ()
 
 
 def parse_time(date: str, clock: str) -> datetime:
@@ -171,7 +178,11 @@ def filter_board(
         if category_tokens and departure.category.casefold() not in category_tokens:
             continue
         matching.append(departure)
-    return replace(board, departures=tuple(matching[:limit]))
+    return replace(
+        board,
+        departures=tuple(matching[:limit]),
+        next_departures=tuple(departure for departure in matching if not departure.cancelled)[:2],
+    )
 
 
 class SalzburgClient:

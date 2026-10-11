@@ -1,5 +1,7 @@
 # Salzburg Verkehr for Home Assistant
 
+<p><img src="assets/salzburg-verkehr.svg" alt="Salzburg Verkehr" width="96" height="96"></p>
+
 Departure boards powered exclusively by **Salzburg Verkehr**, with UI setup and no personal API key. Written as an independent integration, inspired by the functionality of [agentcny/ha-oebb](https://github.com/agentcny/ha-oebb).
 
 ## Features
@@ -9,7 +11,7 @@ Departure boards powered exclusively by **Salzburg Verkehr**, with UI setup and 
 - Filter by exact line number, destination, later intermediate stop, and transport type.
 - Configure multiple independent boards, including different directions at the same stop.
 - Change filters, update interval and board length after setup.
-- Two sensors per board: **Next departure** and **Departures count**.
+- Three sensors per board: **Next departure**, **After next departure**, and **Departures count**.
 - Scheduled and realtime times remain separate; missing realtime means unknown delay.
 - Predictions before the scheduled time are retained, including negative delay values.
 - Departures are sorted by their predicted time when available; past departures are excluded.
@@ -20,6 +22,8 @@ Departure boards powered exclusively by **Salzburg Verkehr**, with UI setup and 
 ## Installation
 
 Requires **Home Assistant 2026.1.0 or newer**. Tested with Home Assistant 2026.1.0 on Python 3.13 and Home Assistant 2026.10.0 on Python 3.14.
+
+The supplied integration icon/logo appears automatically on Home Assistant **2026.3 and newer**, which supports local `brand/` images. Earlier versions retain their generic integration icon until the domain is added to the shared Home Assistant Brands catalog. Sensor functionality remains available from 2026.1.0. The source logo and attribution are in [assets](assets/README.md).
 
 ### HACS
 
@@ -53,7 +57,9 @@ The operator can return an entire hub even when a specific platform is requested
 
 ## Sensors and cards
 
-The next departure sensor is a timestamp, using the prediction when available and the schedule otherwise. Its attributes include the complete configured board:
+Both departure sensors are timestamps, using predictions when available and schedules otherwise. `next_departure` selects the first usable matching departure; `after_next_departure` selects the second. They use the same filters and skip cancelled departures. The first two usable matches are selected before the display limit, so the second sensor still works when Maximum departures is set to 1.
+
+Each sensor's top-level attributes describe its own selected departure. The `departures` attribute contains the configured display list:
 
 ```yaml
 line: "7"
@@ -63,6 +69,8 @@ scheduled_time: "2026-10-11T12:05:00+02:00"
 realtime_time: "2026-10-11T12:06:00+02:00"
 realtime_available: true
 delay_minutes: 1
+delay: true
+delay_time: 1
 cancelled: false
 boarding_stop: Salzburg Salzachstraße
 intermediate_stops:
@@ -70,7 +78,9 @@ intermediate_stops:
 departures: []  # Each row has the same departure fields above.
 ```
 
-This is an illustrative example, not live data. Without a realtime prediction, `realtime_time` and `delay_minutes` are `null`, and `realtime_available` is `false`. A null delay must not be displayed as “on time”. `last_updated` is the last successful fetch time. All departure timestamps carry the Europe/Vienna timezone, including daylight-saving changes.
+This is an illustrative example, not live data. `delay_time` is `(realtime_time - scheduled_time)` in minutes; negative values mean an earlier prediction. `delay` is `true` only for a known positive delay. Without realtime, `delay` is `false`, while `delay_time`, `delay_minutes` and `realtime_time` are `null`, and `realtime_available` is `false`. A false `delay` with no realtime must not be displayed as “on time”. Cancelled rows have no applicable delay. The existing `delay_minutes` attribute is retained for compatibility and has the same value as `delay_time`.
+
+`last_updated` is the last successful fetch time. All departure timestamps carry the Europe/Vienna timezone, including daylight-saving changes. If there is only one usable matching departure, `after_next_departure` is `unknown` and has no selected-departure fields.
 
 Select the actual entity IDs created in your installation when adding a dashboard card. A built-in Entities card works without another custom card:
 
@@ -79,6 +89,7 @@ type: entities
 title: Salzburg departures
 entities:
   - sensor.your_board_next_departure
+  - sensor.your_board_after_next_departure
   - sensor.your_board_departures_count
 ```
 

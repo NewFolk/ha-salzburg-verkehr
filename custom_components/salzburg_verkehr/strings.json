@@ -63,6 +63,9 @@
       },
       "departures_count": {
         "name": "Departures count"
+      },
+      "after_next_departure": {
+        "name": "After next departure"
       }
     }
   }

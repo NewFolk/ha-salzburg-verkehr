@@ -63,6 +63,9 @@
       },
       "departures_count": {
         "name": "Anzahl der Abfahrten"
+      },
+      "after_next_departure": {
+        "name": "Übernächste Abfahrt"
       }
     }
   }
